@@ -9,7 +9,7 @@ def get_data():
 	return data
 	# data.features[0].geometry
 
-db = m.connect(host="localhost",user="thunder",passwd="Parola",db="velislav_gerov")
+db = m.connect(host="localhost",user="root",passwd="toor",db="wordpress")
 cursor = db.cursor()
 
 #Drop if exists
@@ -21,7 +21,7 @@ except:
 
 #Create table
 try:
-	cursor.execute("CREATE TABLE gm_eq_data( ID INT NOT NULL AUTO_INCREMENT PRIMARY KEY, Name VARCHAR(255), Lat DECIMAL(9,7), Lng DECIMAL(10,7) );")
+	cursor.execute("CREATE TABLE gm_eq_data( ID INT NOT NULL AUTO_INCREMENT PRIMARY KEY, Name VARCHAR(255), Lat DOUBLE, Lng DOUBLE);")
 	db.commit()
 except:
 	db.rollback()
@@ -31,8 +31,8 @@ data = get_data()
 #print data
 for item in data.features:
 	try:
-		print item.properties["title"],item.geometry.coordinates[0],item.geometry.coordinates[1]
-		cursor.execute("""insert into gm_eq_data(Name, Lat, Lng) values (%s,%s,%s)""", (item.properties["title"],item.geometry.coordinates[0],item.geometry.coordinates[1]))
+		print item.properties["title"],item.geometry.coordinates[1],item.geometry.coordinates[0]
+		cursor.execute("""insert into gm_eq_data(Name, Lat, Lng) values (%s,%s,%s)""", (item.properties["title"],item.geometry.coordinates[1],item.geometry.coordinates[0]))
 		db.commit()
 	except:
 		print "ROLL"
