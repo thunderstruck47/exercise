@@ -16,7 +16,7 @@
 	var results = <?php echo json_encode($result)?>;
 	function initMap() {
 		map = new google.maps.Map(document.getElementById('map'), {
-		center: new google.maps.LatLng(results[1].Lat, results[1].Lng),
+		center: new google.maps.LatLng(-34.397, 150.644),
 		zoom: 2
 		});
 		var marker, i
