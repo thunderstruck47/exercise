@@ -43,7 +43,7 @@ def initial_population():
     #Populate table
     data = get_data('2017-03-01', '2017-04-10')
     append_data(db,cursor,data)
-    db.close()
+
 def item_tuple(item):
     ID = item.id
     place = item.properties["place"]
@@ -80,31 +80,32 @@ def update(db,cursor):
     data = get_data_url(url)
     if data.metadata["count"] == 0: print "No new data available"
     try:
+        n_updated = 0;
+        n_added = 0;
         for item in data.features:
             cursor.execute("""SELECT COUNT(*) FROM gm_eq_data WHERE IdStr = %s;""", (item.id,))
             result = cursor.fetchone()
-            print result[0]
             if result[0] == 1:
+                n_updated+=1
                 values = item_tuple(item) + (item.id,)
                 cursor.execute("""UPDATE gm_eq_data SET IdStr = %s, Place = %s, Lat = %s, Lng = %s, Depth = %s, Time = %s, Mag = %s WHERE IdStr = %s""", values)
                 db.commit()
             elif result[0] == 0:
+                n_added+=1
                 try:
                     cursor.execute("""insert into gm_eq_data(IdStr, Place, Lat, Lng, Depth, Time, Mag) values (%s,%s,%s,%s,%s,%s,%s)""", item_tuple(item))
                     db.commit()
                 except(m.Error, m.Warning) as e:
                     print e
                     db.rollback()
+        print "Total updated: " + n_updated, "Total added" + n_added
 
     except(m.Error, m.Warning) as e:
         print e
         db.rollback();
+
 #initial_population()
 db = m.connect(host="localhost", user="root", passwd="toor", db="wordpress")
 cursor = db.cursor()
 update(db,cursor)
-
-
-
-
-
+db.close()
