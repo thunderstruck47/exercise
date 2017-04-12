@@ -39,7 +39,7 @@
 					End Date:
 					<input type="date" name="enddate" value="<?php echo $end_date?>">
 					Magnitude higher than: 
-					<input type="number" name="mag" value="<?php echo $mag?>">
+					<input type="number" name="mag" value="<?php echo $mag?>" step="0.01">
 					<input type="submit">
 				</form>
 			</div>
@@ -67,20 +67,6 @@
 			
 		}
 
-	}
-	function aaa() {
-	<?php 
-		global $wpdb;
-		$result = $wpdb->get_results('SELECT * FROM gm_eq_data',OBJECT);
-	?>
-	return <?php echo json_encode($result)?>
-	}
-	function bbb() {
-	<?php 
-		global $wpdb;
-		$result = $wpdb->get_results('SELECT * FROM gm_eq_data WHERE ID=1 or ID=5',OBJECT);
-	?>
-	return <?php echo json_encode($result)?>	
 	}
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDSCZ5RJiB09E4tpoAcr_wjuf-nw9_eBG0&callback=initMap" async defer></script>
