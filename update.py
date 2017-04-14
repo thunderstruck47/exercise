@@ -75,7 +75,8 @@ def update(db,cursor):
     cursor.execute("SELECT * FROM gm_eq_data ORDER BY Time DESC LIMIT 1;")
     last_entry = cursor.fetchone()
     url = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&updatedafter="+ str(last_entry[6]) +"&orderby=time-asc"
-    print last_entry, url
+    print "Started update job"
+    print "Last entry at: " + str(last_entry[6])
     
     data = get_data_url(url)
     if data.metadata["count"] == 0: print "No new data available"
@@ -98,7 +99,8 @@ def update(db,cursor):
                 except(m.Error, m.Warning) as e:
                     print e
                     db.rollback()
-        print "Total updated: " + n_updated, "Total added" + n_added
+        print "Total updated: " + str(n_updated)
+        print "Total added: " + str(n_added)
 
     except(m.Error, m.Warning) as e:
         print e

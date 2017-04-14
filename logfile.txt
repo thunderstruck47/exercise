@@ -1,0 +1,4 @@
+Wed Apr 12 12:37:26 EEST 2017 Started update job
+Wed Apr 12 12:37:26 EEST 2017 Last entry at: 2017-04-12 09:06:23
+Wed Apr 12 12:37:26 EEST 2017 Total updated: 4
+Wed Apr 12 12:37:26 EEST 2017 Total added: 0
