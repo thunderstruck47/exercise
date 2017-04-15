@@ -3,6 +3,12 @@ import urllib2 as u
 import geojson as g
 import MySQLdb as m
 import time as t
+import getopt, sys
+
+MYSQL_HOSTNAME = "localhost"
+MYSQL_USER = "root"
+MYSQL_PASSWORD = "toor"
+MYSQL_DATABASE = "wordpress"
 
 def get_data(start_time, end_time):
     url = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=" + start_time +"&endtime=" + end_time + "&orderby=time-asc"
@@ -20,10 +26,7 @@ def get_date_input(text):
     year,month,day = map(int,date_entry.split('-'))
     if (year>=1999 and month<=12 and month>0): return date_entry
 
-def initial_population():
-    db = m.connect(host="localhost",user="root",passwd="toor",db="wordpress")
-    cursor = db.cursor()
-
+def initial_population(db, cursor):
     #Drop if exists
     try:
         cursor.execute("DROP TABLE gm_eq_data")
@@ -39,7 +42,7 @@ def initial_population():
     except(m.Error, m.Warning) as e:
         print e
         db.rollback()
-    
+
     #Populate table
     data = get_data('2017-03-01', '2017-04-10')
     append_data(db,cursor,data)
@@ -71,13 +74,12 @@ def append_data(db, cursor, data):
             print e
             db.rollback()
 
-def update(db,cursor):
+def update(db, cursor):
     cursor.execute("SELECT * FROM gm_eq_data ORDER BY Time DESC LIMIT 1;")
     last_entry = cursor.fetchone()
     url = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&updatedafter="+ str(last_entry[6]) +"&orderby=time-asc"
     print "Started update job"
-    print "Last entry at: " + str(last_entry[6])
-    
+    print "Last entry at: " + str(last_entry[6]) 
     data = get_data_url(url)
     if data.metadata["count"] == 0: print "No new data available"
     try:
@@ -106,8 +108,52 @@ def update(db,cursor):
         print e
         db.rollback();
 
-#initial_population()
-db = m.connect(host="localhost", user="root", passwd="toor", db="wordpress")
-cursor = db.cursor()
-update(db,cursor)
-db.close()
+
+def help():
+    print "Usage: geqdata [OPTIONS...] [FILE]..."
+    print "    -h, --help       Display this help and exit."
+    print "    -u, --update     Update database."
+    print "    -c, --check      Check for updates to database."
+    print "    -l, --log        Log to specified file"
+
+
+def handle_arguments():
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],"huclo:v",["help","update","ckeck","log","output="])
+    except getopt.GetoptError as err:
+        # print help information and exit
+        print str(err)
+        sys.exit(2)
+    output = None
+    verbose = False
+    for o, a in opts:
+        if o == "-v":
+            verbose = True
+        elif o in ("-h","--help"):
+            help()
+            sys.exit()
+        elif o in ("-o","--output"):
+            output = a
+        elif o in ("-i","--init"):
+            handle_action(initial_population)
+        elif o in ("-u","--update"):
+            handle_action(update)
+        elif o in ("-c","--check"):
+            #handle_action(check)
+            pass
+        else:
+            assert False, "unhandled option"
+
+
+def main():
+    handle_arguments()
+
+def handle_action(action):
+    db = m.connect(host=MYSQL_HOSTNAME,user=MYSQL_USER,passwd=MYSQL_PASSWORD,db=MYSQL_DATABASE)
+    c = db.cursor()
+    action(db,c)
+    c.close()
+    db.close()
+
+if __name__ == "__main__":
+    main()
