@@ -4,6 +4,7 @@ import geojson as g
 import MySQLdb as m
 import time as t
 import getopt, sys
+from time import sleep
 
 MYSQL_HOSTNAME = "localhost"
 MYSQL_USER = "root"
@@ -74,40 +75,55 @@ def append_data(db, cursor, data):
             print e
             db.rollback()
 
+def get_updatedafter(value):
+    url = "https://earthquake.usgs.gov/fdsnws/event/1/count?updatedafter=" + str(value)
+    data = get_data_url(url)
+    return data
+
+def check(db,c):
+    c.execute("SELECT * FROM gm_eq_data ORDER BY Time DESC LIMIT 1;")
+    last_entry = c.fetchone()
+    url = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&updatedafter="+ str(last_entry[6]) +"&orderby=time-asc"
+    print "Updates available: {}".format(get_updatedafter(last_entry[6]))
+
 def update(db, cursor):
     cursor.execute("SELECT * FROM gm_eq_data ORDER BY Time DESC LIMIT 1;")
     last_entry = cursor.fetchone()
     url = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&updatedafter="+ str(last_entry[6]) +"&orderby=time-asc"
+    total = get_updatedafter(last_entry[6])
+    i = 0
     print "Started update job"
-    print "Last entry at: " + str(last_entry[6]) 
+    print "Last entry at: " + str(last_entry[6])
     data = get_data_url(url)
     if data.metadata["count"] == 0: print "No new data available"
     try:
+        count = 0
         n_updated = 0;
         n_added = 0;
         for item in data.features:
+            count+=1
             cursor.execute("""SELECT COUNT(*) FROM gm_eq_data WHERE IdStr = %s;""", (item.id,))
             result = cursor.fetchone()
+            progress_bar(count,total)
             if result[0] == 1:
                 n_updated+=1
                 values = item_tuple(item) + (item.id,)
                 cursor.execute("""UPDATE gm_eq_data SET IdStr = %s, Place = %s, Lat = %s, Lng = %s, Depth = %s, Time = %s, Mag = %s WHERE IdStr = %s""", values)
-                db.commit()
             elif result[0] == 0:
                 n_added+=1
-                try:
-                    cursor.execute("""insert into gm_eq_data(IdStr, Place, Lat, Lng, Depth, Time, Mag) values (%s,%s,%s,%s,%s,%s,%s)""", item_tuple(item))
-                    db.commit()
-                except(m.Error, m.Warning) as e:
-                    print e
-                    db.rollback()
-        print "Total updated: " + str(n_updated)
-        print "Total added: " + str(n_added)
+                cursor.execute("""insert into gm_eq_data(IdStr, Place, Lat, Lng, Depth, Time, Mag) values (%s,%s,%s,%s,%s,%s,%s)""", item_tuple(item))
+            db.commit()
+        print "\nTotal updated: " + str(n_updated)
+        print "Total added:   " + str(n_added)
 
     except(m.Error, m.Warning) as e:
         print e
         db.rollback();
 
+def progress_bar(count,total):
+     sys.stdout.write("\r")
+     sys.stdout.write("[%-20s]%d%%"%('='*(count/total*20),(count/total*100)))
+     sys.stdout.flush()
 
 def help():
     print "Usage: geqdata [OPTIONS...] [FILE]..."
@@ -139,8 +155,7 @@ def handle_arguments():
         elif o in ("-u","--update"):
             handle_action(update)
         elif o in ("-c","--check"):
-            #handle_action(check)
-            pass
+            handle_action(check)
         else:
             assert False, "unhandled option"
 
@@ -149,11 +164,15 @@ def main():
     handle_arguments()
 
 def handle_action(action):
-    db = m.connect(host=MYSQL_HOSTNAME,user=MYSQL_USER,passwd=MYSQL_PASSWORD,db=MYSQL_DATABASE)
-    c = db.cursor()
-    action(db,c)
-    c.close()
-    db.close()
+    try:
+        db = m.connect(host=MYSQL_HOSTNAME,user=MYSQL_USER,passwd=MYSQL_PASSWORD,db=MYSQL_DATABASE)
+        c = db.cursor()
+        action(db,c)
+        c.close()
+        db.close()
+    except(m.Error, m.Warning) as e:
+        print e
+        sys.exit(2)
 
 if __name__ == "__main__":
     main()
